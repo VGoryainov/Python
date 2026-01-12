@@ -1,0 +1,28 @@
+import math
+
+def calculate_time(d1, d2, h, v_sand_mph, n, theta_deg): # Расчет времени
+    theta_rad = math.radians(theta_deg) # Переволим градусы в радианы
+    x = d1 * math.tan(theta_rad)
+    L1 = math.sqrt(x ** 2 + d1 ** 2)
+    L2 = math.sqrt((h - x) ** 2 + d2 ** 2)
+    v_sand_fps = v_sand_mph * 5280 / 3600 # Переводим мили/час в футы/секунду
+    t = (L1 + n * L2) / v_sand_fps
+    return t
+
+def theata_search():
+    d1 = 24  # 8 ярдов = 24 фута
+    d2 = 10
+    h = 150  # 50 ярдов = 150 футов
+    v_sand_mph = 5
+    n = 2
+    t_min = 1000000
+    theta_min = 0
+    for theta in range(0,9001):
+        theta_deg = theta/100
+        t = calculate_time(d1, d2, h, v_sand_mph, n, theta_deg)
+        if t < t_min:
+            t_min = t
+            theta_min = theta_deg
+    print(f'Спасателю необходимо начать движение под углом {theta_min:.2f} и тогда он достигнет утопающего через {t_min:.1f} секунды')
+
+theata_search()

@@ -1,0 +1,14 @@
+t = int(input())
+for _ in range(t):
+    n, d = map(int, input().split())
+    s = input().strip()
+    lst = []
+    flag = False
+    for ch in s:
+        if not flag and int(ch) < d:
+            lst.append(str(d))
+            flag = True
+        lst.append(ch)
+    if not flag:
+        lst.append(str(d))
+    print(''.join(lst))

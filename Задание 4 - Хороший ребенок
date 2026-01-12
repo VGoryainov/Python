@@ -1,0 +1,12 @@
+t = int(input())
+lst = []
+mult = 1
+for i in range(t):
+    n = int(input())
+    lst = [int(k) for k in input().split()]
+    lst[lst.index(min(lst))] = min(lst)+1
+    for j in range(len(lst)):
+        mult *= lst[j]
+    print(mult)
+    lst = []
+    mult = 1

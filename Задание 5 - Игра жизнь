@@ -1,0 +1,225 @@
+from PIL import Image, ImageDraw
+
+INPUT_FILE = 'input.csv'
+GENERATIONS = 10
+DEBUG = False
+
+# Зеленые цвета (от тусклого к яркому)
+DARK_GREEN = (34, 139, 34)    # тускло-зеленый
+MEDIUM_GREEN = (0, 200, 0)    # зеленый
+BRIGHT_GREEN = (0, 255, 0)    # ярко-зеленый
+
+def live_neighbors(grid, row, col):
+    """
+     Подсчет живых соседей для клетки (row, col).
+    
+    Args:
+        grid: игровое поле
+        row: строка клетки
+        col: столбец клетки
+    
+    Returns:
+        Количество живых соседей
+    """
+    rows, cols = len(grid), len(grid[0])
+    count = 0
+    
+    for i in range(max(0, row-1), min(rows, row+2)):
+        for j in range(max(0, col-1), min(cols, col+2)):
+            if i == row and j == col:
+                continue
+            if grid[i][j] > 0:
+                count += 1
+    return count
+
+def model(grid):
+    """
+     Обновляет игровое поле по правилам "Игры Жизнь".
+    
+    Args:
+        grid: Список списков, где каждый элемент - возраст клетки (0 - мертвая)
+    
+    Returns:
+        Новое игровое поле после одного поколения
+    """
+    rows, cols = len(grid), len(grid[0])
+    new_grid = [[0 for _ in range(cols)] for _ in range(rows)]
+    
+    for row in range(rows):
+        for col in range(cols):
+            live_nb = live_neighbors(grid, row, col)
+            current_cell_age = grid[row][col]
+            
+            if current_cell_age > 0:
+                if live_nb < 2:
+                    new_grid[row][col] = 0
+                elif 2 <= live_nb <= 3:
+                    new_grid[row][col] = current_cell_age + 1
+                elif live_nb > 3:
+                    new_grid[row][col] = 0
+            else:
+                if live_nb == 3:
+                    new_grid[row][col] = 1
+    
+    return new_grid
+
+def read_input(filename):
+    """
+   Чтение начального состояния из CSV файла.
+    
+    Args:
+        filename: имя входного файла
+    
+    Returns:
+        Начальное игровое поле
+
+    Первая строка: размеры сетки в формате 'rows,cols' или 'rows;cols'
+    Последующие строки: значения клеток через тот же разделитель
+    """
+    grid = []
+    
+    with open(filename, 'r') as file:
+        lines = file.readlines()
+    if not lines:
+        raise ValueError('Файл пустой')
+    first_line = lines[0].strip() # Читаем первую строку с размерами
+    if ';' in first_line: # Определяем разделитель
+        separator = ';'
+    elif ',' in first_line:
+        separator = ','
+    else:
+        raise ValueError('Разделитель должен быть "," или ";"')
+    size_parts = first_line.split(separator) # Получаем размеры
+    if len(size_parts) != 2:
+        raise ValueError('В первой строке должно быть 2 числа')
+    try:
+        rows = int(size_parts[0].strip())
+        cols = int(size_parts[1].strip())
+    except ValueError:
+        raise ValueError('Размеры должны быть целыми числами')
+    data_lines = lines[1:] # Читаем данные клеток
+    if len(data_lines) < rows:
+        raise ValueError(f'Недостаточно строк данных: необходимо {rows}, получено {len(data_lines)}')
+    for i in range(rows): # Создаем сетку
+        line = data_lines[i].strip()
+        values = line.split(separator) # Разделяем значения
+        if len(values) < cols:
+            raise ValueError(f'Строка {i+1}: недостаточно значений: необходимо {cols}, получено {len(values)}')
+        row_data = []
+        for j in range(cols):
+            value = int(values[j].strip())
+            row_data.append(value)
+        grid.append(row_data)
+    return grid
+
+def write_output(grid, generation):
+    """
+    Запись состояния поля в CSV файл.
+    
+    Args:
+        grid: игровое поле
+        filename: базовое имя файла
+        generation: номер поколения
+
+    Первая строка содержит размеры сетки через запятую.
+    """
+    output_filename = f'generation_{generation}.csv'
+    rows = len(grid)
+    cols = len(grid[0])
+    with open(output_filename, 'w') as file:
+        file.write(f"{rows},{cols}\n")
+        for row in grid:
+            row_str = ';'.join(str(cell) for cell in row)
+            file.write(row_str + '\n')
+
+def get_color_for_age(age):
+    """
+    Получение цвета для клетки на основе ее возраста.
+    
+    Args:
+        age: возраст клетки
+    """
+    if age == 0:
+        return (0, 0, 0)
+    elif age == 1:
+        return DARK_GREEN
+    elif age <= 3:
+        return MEDIUM_GREEN
+    else:
+        return BRIGHT_GREEN
+
+def write_png(grid, generation):
+    """
+    Создание PNG изображения состояния поля.
+    
+    Args:
+        grid: игровое поле
+        generation: номер поколения
+    """
+    rows = len(grid)
+    cols = len(grid[0])
+    cell_size = 20
+    img_width = cols * cell_size
+    img_height = rows * cell_size
+    image = Image.new('RGB', (img_width, img_height), color='white')
+    draw = ImageDraw.Draw(image)
+    for row in range(rows): # Рисуем сетку и клетки
+        for col in range(cols):
+            x0 = col * cell_size
+            y0 = row * cell_size
+            x1 = x0 + cell_size
+            y1 = y0 + cell_size
+            cell_age = grid[row][col]
+            color = get_color_for_age(cell_age)
+            draw.rectangle([x0, y0, x1, y1], fill=color, outline='gray')
+    output_filename = f'generation_{generation}.png'
+    image.save(output_filename)
+
+if DEBUG:
+    grid = read_input('test.csv')
+    expected = \
+            [[0,0,0],
+            [1,1,0],
+            [0,0,0]
+            ]
+    actual = model(grid)
+    write_output(actual,0)
+    if actual != expected:
+        print('Test model Failed')
+    else:
+        print('Test passed')
+
+    expected = 3
+    actual = live_neighbors(grid, 1, 0)
+    if actual != expected:
+        print('Test live_neighbors Failed 10')
+    else:
+        print('Test passed')
+
+    expected = 0
+    actual = live_neighbors(grid, 2, 2)
+    if actual != expected:
+        print('Test live_neighbors Failed 22')
+    else:
+        print('Test passed')
+
+    expected = 1
+    actual = live_neighbors(grid, 0, 1)
+    if actual != expected:
+        print('Test live_neighbors Failed 01')
+    else:
+        print('Test passed')
+    
+else:
+    try:
+        grid = read_input(INPUT_FILE)
+        write_output(grid, 0)
+        write_png(grid, 0)
+        for gen in range(1, GENERATIONS + 1):
+            grid = model(grid)
+            write_output(grid, gen)
+            write_png(grid, gen)
+    except FileNotFoundError:
+        print(f'Ошибка: Файл "{INPUT_FILE}" не найден.')
+    except ValueError as e:
+        print(f'Ошибка в формате файла: {e}')

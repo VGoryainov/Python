@@ -1,0 +1,130 @@
+import zip_util
+import math
+
+def read_data(): # Получаем данные из файла
+    addres_lst = zip_util.read_zip_all()
+    return addres_lst
+
+def read_evaluate_prin(): # Считываем данные пользователя
+    print(f'Command ("loc", "zip", "dist", "end") =>', end='')
+    komand = input()
+    return komand
+
+def to_dms(coord, is_lat): # Преобразовываем десятичные кординаты в нужный вид
+    dir_symbol = 'N' if (is_lat and coord >= 0) else 'S' if is_lat else 'E' if coord >= 0 else 'W'
+    coord = abs(coord)
+    degrees = int(coord)
+    minutes_float = (coord - degrees) * 60
+    minutes = int(minutes_float)
+    seconds = (minutes_float - minutes) * 60
+    deg_fmt = f"{degrees:03d}"
+    min_fmt = f"{minutes:02d}"
+    sec_fmt = f"{seconds:05.2f}"
+    return f"{deg_fmt}°{min_fmt}'{sec_fmt}\"{dir_symbol}"
+
+def loc(k, lst):
+    print(k)
+    metka = True
+    while metka:
+        zip_code = input('Enter a ZIP Code to lookup =>')
+        print(zip_code)
+        cou = 0
+        for value in lst:
+            if value[0] == zip_code:
+                print(f'ZIP Code {zip_code} is in {value[3]}, {value[4]}, {value[5]} county,')
+                print(f'coordinates: ({to_dms(value[1], True)}, {to_dms(value[2], False)})')
+                metka = False
+                cou +=1
+        if cou == 0:
+            print('Error, please enter the values again.')
+    
+
+def zip(k, lst):
+    print(k)
+    metka = True
+    while metka:
+        cty = input('Enter a city name to lookup =>')
+        print(cty)
+        state = input('Enter the state name to lookup =>')
+        print(state)
+        lst_index = []
+        for value in lst:
+            if cty.capitalize() == value[3] and state.upper() == value[4]:
+                lst_index.append(value[0])
+        if lst_index == []:
+            print('Error, please enter the values again.')
+            continue
+        else:
+            print(f'The following ZIP Code(s) found for {cty.capitalize()}, {state.upper()}: ', end='')
+            print(*lst_index)
+            metka = False
+
+
+
+def dist(k, lst):
+    print(k)
+    metka = True
+    while metka:
+        index1 = input('Enter the first ZIP Code => ')
+        print(index1)
+        index2 = input('Enter the second ZIP Code =>')
+        print(index2)
+        x1, x2, y1, y2 = 0, 0, 0, 0
+        for value in lst:
+            if value[0] == index1:
+                x1 = value[1]
+                y1 = value[2]
+            if value[0] == index2:
+                x2 = value[1]
+                y2 = value[2]
+        if x1 == 0 or x2 == 0:
+             print('Error, please enter the values again.')
+             continue
+        else:
+            d = dist_calculation(x1, x2, y1, y2)
+            print(f'The distance between {index1} and {index2} is {d:.2f} miles')
+            metka = False
+        
+
+
+def dist_calculation(x1, x2, y1, y2):
+    x1 = math.radians(x1)
+    x2 = math.radians(x2)
+    y1 = math.radians(y1)
+    y2 = math.radians(y2)
+    deltaX = x1 - x2 # Широта
+    deltaY = y1 - y2 # Долгота
+    r = 3959 # Радиус земли в милях
+    havO = (1-math.cos(deltaX)+math.cos(x1)*math.cos(x2)*(1-math.cos(deltaY)))/2
+    O = 2*math.asin(math.sqrt(havO))
+    d = r*O
+    return d
+
+def end(k):
+    print(k)
+    print()
+    print('Done')
+
+
+flag = True
+ad_lst = read_data()
+while flag:
+    k = read_evaluate_prin().lower()
+    if k == 'loc':
+        loc(k, ad_lst)
+        print()
+        continue
+    elif k == 'zip':
+        zip(k, ad_lst)
+        print()
+        continue
+    elif k == 'dist':
+        dist(k, ad_lst)
+        print()
+        continue
+    elif k == 'end':
+        end(k)
+        flag = False
+    else:
+        print('Invalid command, ignoring')
+        continue
